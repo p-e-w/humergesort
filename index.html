@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>Rank arbitrary lists through human-powered comparison sorting</title>
+
+	<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+	<script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
+	<style>
+	.subheading {
+		color: #999;
+		font-size: 28px;
+	}
+
+	.top-button {
+		margin-top: 20px;
+	}
+
+	.input .alert {
+		margin-top: 5px;
+		margin-bottom: 8px;
+	}
+
+	.input textarea {
+		font-size: 24px;
+	}
+
+	.progress {
+		height: 24px;
+		margin-top: 20px;
+		margin-bottom: 5px;
+	}
+
+	.progress-bar {
+		min-width: 250px;
+		line-height: 24px;
+		font-size: 16px;
+	}
+
+	.comparisons {
+		font-weight: bold;
+	}
+
+	.choice {
+		white-space: normal;
+		text-align: left;
+		padding: 10px 16px;
+		font-size: 24px;
+	}
+
+	.result ol {
+		font-size: 24px;
+	}
+
+	.new {
+		margin-left: 15px;
+	}
+
+	.footer {
+		margin-top: 30px;
+	}
+	</style>
+</head>
+
+<body>
+
+<div class="container">
+	<div class="input">
+		<div class="row">
+			<div class="col-xs-8"><h1>Items to rank <span class="subheading">(one item per line)</span></h1></div>
+			<div class="col-xs-4 text-right"><button type="button" class="btn btn-primary btn-lg top-button start">Start ranking</button></div>
+		</div>
+		<div class="alert alert-warning">Enter at least two non-empty lines.</div>
+		<div class="row">
+			<div class="col-xs-12">
+<textarea class="form-control" rows="15">
+apples
+pears
+strawberries
+bananas
+apricots
+grapes
+</textarea>
+			</div>
+		</div>
+	</div>
+
+	<div class="choices">
+		<div class="row">
+			<div class="col-xs-12">
+				<div class="progress">
+					<div class="progress-bar progress-bar-success">Comparison <span class="comparisons completed"></span> of around <span class="comparisons total"></span></div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12"><h1>Which of these two do you prefer?</h1></div>
+		</div>
+		<div class="row">
+			<div class="col-xs-6"><button type="button" class="btn btn-default btn-lg btn-block choice first"></button></div>
+			<div class="col-xs-6"><button type="button" class="btn btn-default btn-lg btn-block choice second"></button></div>
+		</div>
+	</div>
+
+	<div class="result">
+		<div class="row">
+			<div class="col-xs-6"><h1>Your ranking, from best to worst</h1></div>
+			<div class="col-xs-6 text-right">
+				<button type="button" class="btn btn-info btn-lg top-button again">Rank these again</button>
+				<button type="button" class="btn btn-warning btn-lg top-button new">Rank new items</button>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-12">
+				<ol>
+				</ol>
+			</div>
+		</div>
+	</div>
+
+	<div class="footer">
+		<div class="row">
+			<div class="col-xs-6">
+				<iframe src="http://ghbtns.com/github-btn.html?user=p-e-w&repo=humergesort&type=watch&count=true" allowtransparency="true" frameborder="0" scrolling="0" width="110" height="20"></iframe>
+				<iframe src="http://ghbtns.com/github-btn.html?user=p-e-w&repo=humergesort&type=fork&count=true" allowtransparency="true" frameborder="0" scrolling="0" width="95" height="20"></iframe>
+			</div>
+			<div class="col-xs-6 text-right">© 2014 <a href="http://about.me/weidmann">Philipp Emanuel Weidmann</a></div>
+		</div>
+	</div>
+</div>
+
+<!-- AddThis Button BEGIN -->
+<div class="addthis_toolbox addthis_floating_style addthis_32x32_style" style="right:25px;top:15px;">
+<a class="addthis_button_preferred_1"></a>
+<a class="addthis_button_preferred_2"></a>
+<a class="addthis_button_preferred_3"></a>
+<a class="addthis_button_preferred_4"></a>
+<a class="addthis_button_compact"></a>
+</div>
+<script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-518ecebf44cd7bc2"></script>
+<!-- AddThis Button END -->
+
+
+<script>
+/*
+ * humergesort – Rank arbitrary lists through human-powered comparison sorting
+ *
+ *
+ * Copyright © 2014 Philipp Emanuel Weidmann <pew@worldwidemann.com>
+ *
+ * Nemo vir est qui mundum non reddat meliorem.
+ *
+ *
+ * humergesort is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * humergesort is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with humergesort.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+// Adapted from http://www.stoimen.com/blog/2010/07/02/friday-algorithms-javascript-merge-sort/
+function merge(left, right, compareCallback, resultCallback, result) {
+	if (left.length && right.length) {
+		compareCallback(left[0], right[0], function(choice) {
+			if (choice == 0) {
+				result.push(left.shift());
+			} else {
+				result.push(right.shift());
+			}
+
+			merge(left, right, compareCallback, resultCallback, result);
+		});
+
+	} else {
+		while (left.length)
+			result.push(left.shift());
+
+		while (right.length)
+			result.push(right.shift());
+
+		resultCallback(result);
+	}
+}
+
+function mergeSort(array, compareCallback, resultCallback) {
+	if (array.length < 2) {
+		resultCallback(array);
+		return;
+	}
+
+	var middle = parseInt(array.length / 2);
+	var left   = array.slice(0, middle);
+	var right  = array.slice(middle, array.length);
+
+	mergeSort(left, compareCallback, function(result1) {
+		mergeSort(right, compareCallback, function(result2) {
+			merge(result1, result2, compareCallback, resultCallback, new Array());
+		});
+	});
+}
+
+
+// Adapted from http://bost.ocks.org/mike/shuffle/
+function fisherYatesShuffle(array) {
+	var windowSize = array.length;
+
+	while (windowSize > 0) {
+		var index = Math.floor(Math.random() * windowSize);
+		windowSize--;
+
+		var element = array[windowSize];
+		array[windowSize] = array[index];
+		array[index] = element;
+	}
+
+	return array;
+}
+
+
+$(document).ready(function() {
+	$(".input .alert").hide();
+	$(".choices").hide();
+	$(".result").hide();
+
+
+	var items;
+	var currentChoiceCallback;
+
+	function startSort() {
+		// Eliminate any existing order (reduces human "order bias")
+		items = fisherYatesShuffle(items);
+
+		// This is approximate only, since the exact number of comparisons depends on the user's choices,
+		// but actually gives a pretty good estimate in most cases
+		var comparisonsTotal = Math.floor(items.length / 2) * Math.round(Math.log(items.length) / Math.LN2);
+		var comparisonsCompleted = 0;
+
+		$(".comparisons.total").text(comparisonsTotal);
+
+		mergeSort(items, function(a, b, choiceCallback) {
+			comparisonsCompleted++;
+			var percentage = Math.min(100, Math.round((comparisonsCompleted / comparisonsTotal) * 100));
+			$(".comparisons.completed").text(comparisonsCompleted);
+			$(".progress-bar").css("width", percentage + "%");
+
+			$(".choice").blur();
+			$(".choice.first").text(a);
+			$(".choice.second").text(b);
+
+			currentChoiceCallback = choiceCallback;
+
+		}, function(result) {
+			$(".result ol").empty();
+			result.forEach(function(item) {
+				$(".result ol").append($("<li>").text(item));
+			});
+
+			$(".choices").hide();
+			$(".result").show();
+		});
+	}
+
+
+	$(".start").click(function() {
+		items = $(".input textarea").val().split("\n");
+
+		// Remove empty lines
+		items = items.map(function(item) {
+			return item.trim();
+		}).filter(function(item) {
+			return item.length > 0;
+		});
+
+		if (items.length < 2) {
+			$(".input .alert").show();
+			return;
+		}
+
+		startSort();
+
+		$(".input").hide();
+		$(".choices").show();
+	});
+
+	$(".choice.first").click(function() {
+		currentChoiceCallback(0);
+	});
+
+	$(".choice.second").click(function() {
+		currentChoiceCallback(1);
+	});
+
+	$(".again").click(function() {
+		startSort();
+
+		$(".result").hide();
+		$(".choices").show();
+	});
+
+	$(".new").click(function() {
+		$(".result").hide();
+		$(".input textarea").val("");
+		$(".input .alert").hide();
+		$(".input").show();
+	});
+});
+
+</script>
+
+</body>
+
+</html>
